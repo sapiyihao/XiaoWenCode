@@ -1,0 +1,17 @@
+# 统一换行符，避免 Windows/Linux 来回改
+* text=auto
+*.py   text eol=lf
+*.md   text eol=lf
+*.csv  text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# 二进制
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pt   binary
+*.npz  binary
+*.npy  binary
+*.parquet binary
