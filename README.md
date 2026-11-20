@@ -158,19 +158,44 @@
 - 丢掉未提交的改动 → `git checkout -- <file>` 或 `git restore <file>`
 - 只重写**尚未推送**的本地提交 → 允许，但推送前必须确认
 
-### 7.4 本机特例（必须用这份配置）
+### 7.4 连通配置（已实测可用，2026-11-20）
 
-本机 git 默认 **schannel 后端 TLS 握手失败**（`SEC_E_NO_CREDENTIALS`），已在本仓库本地配置改用 openssl：
+本机网络特征：代理把 `github.com` 解析成 fake-ip（`198.18.x.x`），**22 端口不通、443 可通**。因此：
 
-```bash
-git config http.sslBackend openssl
+| 项 | 配置 |
+|---|---|
+| 远端 | `ssh://git@ssh.github.com:443/sapiyihao/XiaoWenCode.git` |
+| 认证 | `~/.ssh/id_rsa`（公钥已加至 GitHub 账号 `sapiyihao`） |
+| HTTPS 备选 | `git config http.sslBackend openssl`（本机 schannel 后端报 `SEC_E_NO_CREDENTIALS`；**仅本仓库**，不动全局） |
+
+### 7.5 推送命令（必须带 `GIT_SSH_COMMAND`）
+
+```powershell
+$env:GIT_SSH_COMMAND = "ssh -p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+git push
 ```
 
-该设置**只作用于本仓库**，不影响全局配置。换机器克隆后如遇同样报错，照此设置一次即可。
+**两个坑**：
 
-### 7.5 首次推送需要凭据
+| 坑 | 说明 |
+|---|---|
+| 必须 `-p 443` | 22 端口被代理拦截，直连 `github.com:22` 超时 |
+| `UserKnownHostsFile` 写 **`/dev/null`**，不要写 `NUL` | MSYS 会把 `NUL` 当相对路径，在当前目录**创建一个名为 `NUL` 的文件** |
 
-远端为公开仓库，**读取可匿名，写入需 GitHub 凭据**（PAT 或 Git Credential Manager）。首次 `git push` 会要求认证，认证一次后由凭据管理器记住。
+### 7.6 沙箱限制（重要）
+
+本环境的命令沙箱**禁止子进程创建管道**，git 调 `sh.exe` 时会报：
+
+```
+sh.exe: fatal error - couldn't create signal pipe, Win32 error 5
+```
+
+| 操作 | 是否受限 |
+|---|---|
+| `git add` / `commit` / `log` / `status` / `diff` | ❌ 不受限 |
+| **`git push` / `pull` / `fetch`（走 SSH）** | ✅ **必须以 `danger-full-access` 权限执行**（会请求你批准一次） |
+
+> 首次推送已于 2026-11-20 验证通过（`main -> main`，2 个提交）。
 
 ---
 
